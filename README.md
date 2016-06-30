@@ -22,11 +22,12 @@ your project's root directory:
 ## Testing the Package
 
 This folder contains a test application (simple-app-message-test) that can and
-should be used to test the libraries functionality.
+should be used to test the libraries functionality. To build the test app, run
+the following command from within the `simple-app-message-test` folder:
 
-**NOTE**: Building the sample app will also rebuild and reimport the package (
-i.e. there is no need to seperately build the package before building the
-application).
+```
+> npm run build
+```
 
 # License
 

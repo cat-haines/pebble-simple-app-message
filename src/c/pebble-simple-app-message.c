@@ -1,5 +1,5 @@
 #include <pebble.h>
-#include "simple-app-message.h"
+#include "pebble-simple-app-message.h"
 #include "pebble-events/pebble-events.h"
 #include "@smallstoneapps/linked-list/linked-list.h"
 
