@@ -23,6 +23,16 @@
     ],
     "resources": {
       "media": []
-    }
+    },
+    "messageKeys": [
+      "SIMPLE_APP_MESSAGE_CHUNK_DATA",
+      "SIMPLE_APP_MESSAGE_CHUNK_SIZE",
+      "SIMPLE_APP_MESSAGE_CHUNK_TOTAL"
+    ]
+  },
+  "devDependencies": {
+    "eslint": "^1.0.0",
+    "eslint-config-pebble": "^1.2.0",
+    "eslint-plugin-standard": "^1.3.2"
   }
 }
