@@ -10,7 +10,7 @@
   },
   "private": true,
   "dependencies": {
-    "pebble-simple-app-message": "../"
+    "pebble-simple-app-message": "file:///Users/cathaines/src/pebble/pebble-simple-app-message"
   },
   "pebble": {
     "displayName": "simple-app-message-test",
