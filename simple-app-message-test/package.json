@@ -1,0 +1,32 @@
+{
+  "name": "simple-app-message-test",
+  "author": "MakeAwesomeHappen",
+  "version": "1.0.0",
+  "keywords": [
+    "pebble-app"
+  ],
+  "private": true,
+  "dependencies": {
+    "simple-app-message": "file:///Users/cathaines/src/pebble/simple-app-message"
+  },
+  "pebble": {
+    "displayName": "simple-app-message-test",
+    "uuid": "3fff53d2-1b59-48d7-8187-0c2f3674c32d",
+    "sdkVersion": "3",
+    "enableMultiJS": true,
+    "targetPlatforms": [
+      "aplite",
+      "basalt",
+      "chalk"
+    ],
+    "watchapp": {
+      "watchface": false
+    },
+    "messageKeys": [
+      "dummy"
+    ],
+    "resources": {
+      "media": []
+    }
+  }
+}
