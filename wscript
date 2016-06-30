@@ -7,6 +7,8 @@ import os
 import shutil
 import waflib
 
+print 'starting..'
+
 top = '.'
 out = 'build'
 

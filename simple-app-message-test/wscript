@@ -3,7 +3,12 @@
 #
 # Feel free to customize this to your needs.
 #
+
 import os.path
+import json
+import os
+import subprocess
+
 
 top = '.'
 out = 'build'
@@ -14,12 +19,32 @@ def options(ctx):
 
 
 def configure(ctx):
-    """
-    This method is used to configure your build. ctx.load(`pebble_sdk`) automatically configures
-    a build for each valid platform in `targetPlatforms`. Platform-specific configuration: add your
-    change after calling ctx.load('pebble_sdk') and make sure to set the correct environment first.
-    Universal configuration: add your change prior to calling ctx.load('pebble_sdk').
-    """
+    app_dir = os.getcwd()
+    ctx.find_program('pebble')
+
+    package_json_node = ctx.path.find_node('package.json')
+    node_folder = ctx.path.find_node('node_modules')
+
+    with open(package_json_node.abspath()) as f:
+        package_info = json.load(f)
+
+    for name, p in package_info['dependencies'].iteritems():
+        dep_folder = node_folder.find_node(str(name)).abspath()
+
+        if 'dist.zip' not in os.listdir(dep_folder):
+            try:
+                os.chdir(p)
+                print os.getcwd()
+
+                subprocess.check_call(['pebble', 'clean'])
+                subprocess.check_call(['pebble', 'build'])
+
+                os.chdir(str(node_folder.abspath()))
+                subprocess.check_call(['rm', '-rf', str(dep_folder)])
+            except subprocess.calledProcessError:
+                print 'Error building ' + dep_folder
+
+    os.chdir(app_dir)
     ctx.load('pebble_sdk')
 
 

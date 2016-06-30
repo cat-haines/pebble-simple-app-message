@@ -1,9 +1,9 @@
 {
-  "name": "simple-app-message",
+  "name": "pebble-simple-app-message",
   "author": "MakeAwesomeHappen",
   "version": "1.0.0",
   "files": ["dist.zip"],
-  "keywords": ["pebble-package"],
+  "keywords": ["pebble-package", "AppMessage"],
   "dependencies": {},
   "pebble": {
     "projectType": "package",
