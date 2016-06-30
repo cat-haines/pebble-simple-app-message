@@ -29,19 +29,20 @@ def configure(ctx):
         package_info = json.load(f)
 
     for name, p in package_info['dependencies'].iteritems():
-        dep_folder = node_folder.find_node(str(name)).abspath()
-
-        if 'dist.zip' not in os.listdir(dep_folder):
+        if os.path.exists(p):
             try:
-                os.chdir(p)
-                print os.getcwd()
-
-                subprocess.check_call(['pebble', 'clean'])
-                subprocess.check_call(['pebble', 'build'])
-
+                dep_folder = node_folder.find_node(str(name)).abspath()
                 os.chdir(str(node_folder.abspath()))
                 subprocess.check_call(['rm', '-rf', str(dep_folder)])
-            except subprocess.calledProcessError:
+
+                os.chdir(app_dir)
+                os.chdir(p)
+                subprocess.check_call(['pebble', 'clean'])
+                subprocess.check_call(['pebble', 'build'])
+                os.chdir(app_dir)
+                subprocess.check_call(['pebble', 'package', 'install', str(name)])
+
+            except subprocess.CalledProcessError:
                 print 'Error building ' + dep_folder
 
     os.chdir(app_dir)
