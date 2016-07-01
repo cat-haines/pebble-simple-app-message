@@ -1,5 +1,6 @@
 #!/bin/bash
-rm -rf node_modules/simple-app-message
+pwd
+rm -rf ./node_modules/pebble-simple-app-message
 cd ..
 pebble build
 cd simple-app-message-test
