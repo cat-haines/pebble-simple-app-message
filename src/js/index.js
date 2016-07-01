@@ -1,14 +1,54 @@
 'use strict';
 
+var messageKeys = require('message_keys');
+var objectToMessageKeys = require('./utils').objectToMessageKeys;
+
 /**
  * @return {void}
  */
 function simpleAppMessage() { }
 
+simpleAppMessage._chunkSize = 0;
+
+/**
+ * @param {object} data
+ * @param {function} callback
+ * @return {void}
+ */
+simpleAppMessage.send = function(data, callback) {
+  if (!simpleAppMessage._chunkSize) {
+
+    // fetch chunk size
+    Pebble.addEventListener('appmessage', function(e) {
+      simpleAppMessage._chunkSize =
+        e.payload[messageKeys.SIMPLE_APP_MESSAGE_CHUNK_SIZE];
+    });
+
+    Pebble.sendAppMessage(objectToMessageKeys({
+      SIMPLE_APP_MESSAGE_CHUNK_SIZE: 1
+    }), function() {
+      // success
+
+    }, function(error) {
+      console.log('Failed to request chunk size!');
+      console.log(JSON.stringify(error));
+    });
+  } else {
+    simpleAppMessage._send(data, callback)
+  }
+};
+
+/**
+ * @private
+ */
+simpleAppMessage._send = function() {
+
+}
+
 /**
  * serialize and object into an Array ready for transport via appMessage
  * @param {object} data
- * @returns {Array}
+ * @return {Array}
  */
 simpleAppMessage.serialize = function(data) {
   var keys = Object.keys(data);
@@ -23,11 +63,12 @@ simpleAppMessage.serialize = function(data) {
   };
 
   /**
-   * @return {void}
+   * @private
    * @param {null|boolean|string|Array|number} val
    * @param {boolean} [useTerminator=true]
+   * @return {void}
    */
-  function pushResult(val, useTerminator) {
+  function _pushResult(val, useTerminator) {
     if (useTerminator) {
       result = result.concat(val, '\0');
     } else {
@@ -40,22 +81,22 @@ simpleAppMessage.serialize = function(data) {
   }
 
   // number of keys
-  pushResult(length);
+  _pushResult(length);
 
   for (var i = 0; i < length; i++) {
     var key = keys[i];
     var val = data[key];
 
     // key
-    pushResult(key.split(''), true);
+    _pushResult(key.split(''), true);
 
     switch (typeof val) {
       case 'object' :
         if (val === null) {
-          pushResult(TYPES.NULL);
+          _pushResult(TYPES.NULL);
         } else if (Array.isArray(val)) {
-          pushResult(TYPES.DATA);
-          pushResult(
+          _pushResult(TYPES.DATA);
+          _pushResult(
             [
               (val.length >>> 8) & 255,
               (val.length >>> 0) & 255
@@ -65,8 +106,8 @@ simpleAppMessage.serialize = function(data) {
         break;
 
       case 'number' :
-        pushResult(TYPES.INT);
-        pushResult([
+        _pushResult(TYPES.INT);
+        _pushResult([
           (val >>> 24) & 255,
           (val >>> 16) & 255,
           (val >>> 8) & 255,
@@ -75,13 +116,13 @@ simpleAppMessage.serialize = function(data) {
         break;
 
       case 'string' :
-        pushResult(TYPES.STRING);
-        pushResult(val.split(''), true);
+        _pushResult(TYPES.STRING);
+        _pushResult(val.split(''), true);
         break;
 
       case 'boolean' :
-        pushResult(TYPES.BOOL);
-        pushResult(val ? 1 : 0);
+        _pushResult(TYPES.BOOL);
+        _pushResult(val ? 1 : 0);
         break;
     }
 
