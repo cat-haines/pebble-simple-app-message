@@ -1,6 +1,7 @@
 # Ignore build generated files
 build/
 dist/
+coverage/
 dist.zip
 
 # Ignore waf lock file

@@ -7,4 +7,5 @@ module.exports.objectToMessageKeys = function(obj) {
   Object.keys(obj).forEach(function(key) {
     result[messageKeys[key]] = obj[key];
   });
+  return result;
 };

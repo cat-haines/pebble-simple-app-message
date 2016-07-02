@@ -6,7 +6,7 @@ var objectToMessageKeys = require('./utils').objectToMessageKeys;
 /**
  * @return {void}
  */
-function simpleAppMessage() { }
+var simpleAppMessage = module.exports;
 
 simpleAppMessage._chunkSize = 0;
 
@@ -20,30 +20,37 @@ simpleAppMessage.send = function(data, callback) {
 
     // fetch chunk size
     Pebble.addEventListener('appmessage', function(e) {
-      simpleAppMessage._chunkSize =
-        e.payload[messageKeys.SIMPLE_APP_MESSAGE_CHUNK_SIZE];
+      var chunkSize = e.payload[messageKeys.SIMPLE_APP_MESSAGE_CHUNK_SIZE];
+
+      if (!chunkSize || chunkSize <= 0) {
+        throw new Error('simpleAppMessage: Fetched chunk size is invalid');
+      }
+
+      simpleAppMessage._chunkSize = chunkSize;
     });
 
     Pebble.sendAppMessage(objectToMessageKeys({
       SIMPLE_APP_MESSAGE_CHUNK_SIZE: 1
     }), function() {
       // success
-
+      simpleAppMessage._send(data, callback);
     }, function(error) {
-      console.log('Failed to request chunk size!');
+      console.log('simpleAppMessage: Failed to request chunk size!');
       console.log(JSON.stringify(error));
     });
   } else {
-    simpleAppMessage._send(data, callback)
+    simpleAppMessage._send(data, callback);
   }
 };
 
 /**
  * @private
+ * @param {object} data
+ * @param {function} callback
+ * @return {void}
  */
-simpleAppMessage._send = function() {
-
-}
+simpleAppMessage._send = function(data, callback) {
+};
 
 /**
  * serialize and object into an Array ready for transport via appMessage
@@ -130,5 +137,3 @@ simpleAppMessage.serialize = function(data) {
 
   return result;
 };
-
-module.exports = simpleAppMessage;
