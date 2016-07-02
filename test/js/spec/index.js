@@ -7,47 +7,25 @@ var simpleAppMessage = require('../../../src/js/index');
 var utils = require('../../../src/js/utils');
 var fixtures = require('../fixtures');
 var sinon = require('sinon');
+var serialize = require('../../../src/js/lib/serialize');
 
 describe('simpleAppMessage', function() {
   beforeEach(function() {
     stubs.Pebble();
-  });
-
-  describe('.serialize', function() {
-
-    // @TODO Could really use more extensive tests here
-    it('correctly serializes the data', function() {
-      var data = {
-        Null: null,
-        Bool: true,
-        Int: 257,
-        Data: [1, 2, 3, 4],
-        String: 'test'
-      };
-      var expected = [
-        5, 'N', 'u', 'l', 'l', '\u0000', 0, 'B', 'o', 'o', 'l', '\u0000', 1, 1, 'I',
-        'n', 't', '\u0000', 2, 0, 0, 1, 1, 'D', 'a', 't', 'a', '\u0000', 3, 0, 4, 1,
-        2, 3, 4, 'S', 't', 'r', 'i', 'n', 'g', '\u0000', 4, 't', 'e', 's', 't',
-        '\u0000'
-      ];
-
-      assert.deepEqual(simpleAppMessage.serialize(data), expected);
-    });
+    simpleAppMessage._chunkSize = 0;
   });
 
   describe('.send', function() {
-    it('fetches the chunk size if not already defined then calls ._send()',
+    it('fetches the chunk size if not already defined then calls ._sendData()',
     function(done) {
       var appMessageData = fixtures.appMessageData();
-      sinon.stub(simpleAppMessage, '_send').callsArg(1);
-
-      simpleAppMessage._chunkSize = 0;
+      sinon.stub(simpleAppMessage, '_sendData').callsArg(1);
 
       Pebble.sendAppMessage.callsArg(1);
 
       simpleAppMessage.send(appMessageData, function() {
-        assert.strictEqual(simpleAppMessage._send.callCount, 1);
-        simpleAppMessage._send.restore();
+        assert.strictEqual(simpleAppMessage._sendData.callCount, 1);
+        simpleAppMessage._sendData.restore();
         done();
       });
 
@@ -63,18 +41,18 @@ describe('simpleAppMessage', function() {
       assert.strictEqual(simpleAppMessage._chunkSize, 64);
     });
 
-    it('does not fetch the chunk size if already defined then calls ._send',
+    it('does not fetch the chunk size if already defined then calls ._sendData',
     function(done) {
       var appMessageData = fixtures.appMessageData();
-      sinon.stub(simpleAppMessage, '_send').callsArg(1);
+      sinon.stub(simpleAppMessage, '_sendData').callsArg(1);
 
       simpleAppMessage._chunkSize = 64;
 
       Pebble.sendAppMessage.callsArg(1);
 
       simpleAppMessage.send(appMessageData, function() {
-        assert.strictEqual(simpleAppMessage._send.callCount, 1);
-        simpleAppMessage._send.restore();
+        assert.strictEqual(simpleAppMessage._sendData.callCount, 1);
+        simpleAppMessage._sendData.restore();
         done();
       });
 
@@ -85,7 +63,25 @@ describe('simpleAppMessage', function() {
     });
 
     it('throws if the returned chunk size is zero', function() {
-      simpleAppMessage._chunkSize = 0;
+      var error = {error: 'someError'};
+      simpleAppMessage.send({}, function() {});
+      sinon.stub(simpleAppMessage, '_sendData');
+      sinon.stub(console, 'log');
+
+      Pebble.sendAppMessage.callArgWith(2, error);
+
+      assert(Pebble.sendAppMessage.calledWith(
+        utils.objectToMessageKeys({ SIMPLE_APP_MESSAGE_CHUNK_SIZE: 1 })
+      ));
+
+      assert(console.log.calledWithMatch('Failed to request chunk size'));
+      assert(console.log.calledWith(JSON.stringify(error)));
+
+      simpleAppMessage._sendData.restore();
+      console.log.restore();
+    });
+
+    it('logs an error for failed app messages', function() {
       simpleAppMessage.send({}, function() {});
 
       assert.throws(function() {
@@ -101,5 +97,77 @@ describe('simpleAppMessage', function() {
       assert.strictEqual(simpleAppMessage._chunkSize, 0);
     });
 
+  });
+
+  describe('._sendData', function() {
+    it('calls _sendChunk for each chunk in order', function(done) {
+      var callback = sinon.spy(function() {
+        done();
+      });
+      var data = {test1: 'value1', test2: 'value2'};
+
+      sinon.spy(simpleAppMessage, '_sendChunk');
+      simpleAppMessage._chunkSize = 16;
+
+      Pebble.sendAppMessage.onFirstCall().callsArg(1);
+      Pebble.sendAppMessage.onSecondCall().callsArg(1);
+
+      simpleAppMessage._sendData(data, callback);
+
+      var chunk1 = serialize(data).slice(0, 16);
+      var chunk2 = serialize(data).slice(16);
+      sinon.assert.callOrder(
+        simpleAppMessage._sendChunk.withArgs(chunk1, 2),
+        simpleAppMessage._sendChunk.withArgs(chunk2, 2),
+        callback
+      );
+
+      simpleAppMessage._sendChunk.restore();
+    });
+
+    it('passes an error to the callback if failed', function(done) {
+      var expectedError = {some: 'error'};
+      simpleAppMessage._chunkSize = 16;
+
+      // success on first message
+      Pebble.sendAppMessage.onFirstCall().callsArg(1);
+
+      // fail on second
+      Pebble.sendAppMessage.onSecondCall().callsArgWith(2, expectedError);
+
+      simpleAppMessage._sendData({test1: 'TEST1', test2: 'TEST2'}, function(error) {
+        assert.deepEqual(error, expectedError);
+        done();
+      });
+    });
+
+    it('does not pass an error to the callback if successful', function(done) {
+      simpleAppMessage._chunkSize = 16;
+
+      // success on first and second message
+      Pebble.sendAppMessage.onFirstCall().callsArg(1);
+      Pebble.sendAppMessage.onSecondCall().callsArgWith(1);
+
+      simpleAppMessage._sendData({test1: 'TEST1', test2: 'TEST2'}, function(error) {
+        assert.strictEqual(typeof error, 'undefined');
+        done();
+      });
+
+    });
+  });
+
+  describe('._sendChunk', function() {
+    it('sends the chunk with the correct data and returns a promise', function() {
+      var chunk = serialize({test1: 'TEST1', test2: 'TEST2'});
+      var result = simpleAppMessage._sendChunk(chunk, 1);
+
+      sinon.assert.calledWith(Pebble.sendAppMessage, utils.objectToMessageKeys({
+        SIMPLE_APP_MESSAGE_CHUNK_DATA: chunk,
+        SIMPLE_APP_MESSAGE_CHUNK_TOTAL: 1
+      }));
+
+      assert.strictEqual(typeof result.then, 'function');
+      assert.strictEqual(typeof result.catch, 'function');
+    });
   });
 });
